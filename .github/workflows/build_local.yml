@@ -1,0 +1,35 @@
+name: Wine-Crossover-MacOS-local
+
+on:
+  workflow_dispatch:
+
+env:
+    # this has to be synchronized with the same variable in build_local.sh
+    PACKAGE_UPLOAD: ${{ github.workspace }}/upload
+
+jobs:
+  wine-crossover-local:
+
+    strategy:
+      fail-fast: false
+      matrix:
+        CROSS_OVER_VERSION: [22.0.1] # 22.0.0, 21.2.0, 21.1.0, 20.0.4, 20.0.2, 20.0.1, 20.0.0, 19.0.2, 19.0.1, 19.0.0
+
+    runs-on:  macos-latest
+
+    env:
+      CROSS_OVER_VERSION: ${{ matrix.CROSS_OVER_VERSION }}
+
+    steps:
+
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Run build_local.sh
+        run: ./build_local.sh
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: artifacts-build_local-wine-cx${{ matrix.CROSS_OVER_VERSION }}
+          path: ${{ env.PACKAGE_UPLOAD }}
