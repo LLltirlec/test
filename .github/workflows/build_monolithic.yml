@@ -124,14 +124,6 @@ jobs:
                         sane-backends      \
                         sdl2
 
-      - name: Install Wine Runtime Dependencies (pre 22)
-        if: ${{ matrix.CROSS_OVER_VERSION < '22' }}
-        run: |
-          brew install  faudio             \
-                        little-cms2        \
-                        libpng             \
-                        mpg123
-
       - name: Add bison, cx-llvm, flex & krb5 to $PATH
         run: |
           set -x
@@ -169,50 +161,23 @@ jobs:
         run: |
           pushd sources/wine
           patch -p1 < ${{ github.workspace }}/distversion.patch
+          popd
+
+      - name: Patch missing includes
+        # Patch provided by Josh Dubois, CrossOver product manager, CodeWeavers.
+        run: |
+          pushd sources
           patch -p1 < ${{ github.workspace }}/header-patch.patch
-          popd
-
-      - name: Patch in vkd3d-1.4 (specific to 22.0.0)
-        if: ${{ matrix.CROSS_OVER_VERSION == '22.0.0' }}
-        run: |
-          pushd sources/wine
-          patch -p1 < ${GITHUB_WORKSPACE}/CX22.0.0-vkd3d-1.4.patch
-          popd
-
-      - name: Patch ntdll/wcstring.c to prevent crash if a nullptr is supplied to the function
-        # Hack by dasmy
-        if: startsWith(matrix.CROSS_OVER_VERSION, '20')
-        run: |
-          pushd sources/wine
-          patch -p1 < ${{ github.workspace }}/wcstring.patch
-          popd
-
-      - name: Patch msvcrt to export the missing sincos function (specific to 20)
-        # https://gitlab.winehq.org/wine/wine/-/commit/f0131276474997b9d4e593bbf8c5616b879d3bd5
-        if: startsWith(matrix.CROSS_OVER_VERSION, '20')
-        run: |
-          pushd sources/wine
-          patch -p1 < ${{ github.workspace }}/msvcrt-sincos.patch
           popd
 
       ############ Configure 64bit Version ##############
 
-      - name: Configure wine64 (specific to 22)
-        if: startsWith(matrix.CROSS_OVER_VERSION, '22')
+      - name: Configure wine64
         uses: ./.github/actions/configure_wine
         with:
           winearch: "wine64"
           build-dir: "${{ env.BUILDROOT }}/wine64"
           crossflags: "-g -O2"
-          configure-params: "--enable-win64 --with-vulkan"
-
-      - name: Configure wine64 (pre 22)
-        if: ${{ matrix.CROSS_OVER_VERSION < '22' }}
-        uses: ./.github/actions/configure_wine
-        with:
-          winearch: "wine64"
-          build-dir: "${{ env.BUILDROOT }}/wine64"
-          crossflags: "-g -O2 -fcommon"
           configure-params: "--enable-win64 --with-vulkan"
 
       ############ Build 64bit Version ##############
@@ -224,23 +189,13 @@ jobs:
 
       ############ Configure 32on64bit Version ##############
 
-      - name: Configure wine32on64 (specific to 22)
-        if: startsWith(matrix.CROSS_OVER_VERSION, '22')
+      - name: Configure wine32on64
         uses: ./.github/actions/configure_wine
         with:
           winearch: "wine32on64"
           build-dir: "${{ env.BUILDROOT }}/wine32on64"
           crossflags: "-g -O2"
           configure-params: "--enable-win32on64 --with-wine64=${{ env.BUILDROOT }}/wine64 --without-cms --without-openal --without-gstreamer --without-gphoto --without-krb5 --without-sane --without-vulkan --disable-vulkan_1 --disable-winedbg --disable-winevulkan"
-
-      - name: Configure wine32on64 (pre 22)
-        if: ${{ matrix.CROSS_OVER_VERSION < '22' }}
-        uses: ./.github/actions/configure_wine
-        with:
-          winearch: "wine32on64"
-          build-dir: "${{ env.BUILDROOT }}/wine32on64"
-          crossflags: "-g -O2 -fcommon"
-          configure-params: "--enable-win32on64 --with-wine64=${{ env.BUILDROOT }}/wine64 --without-cms --without-gstreamer --without-gphoto --without-krb5 --without-sane --without-vkd3d --without-vulkan --disable-vulkan_1 --disable-winedbg --disable-winevulkan"
 
       ############ Build 32on64bit Version ##############
 
