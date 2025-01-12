@@ -169,6 +169,7 @@ jobs:
         run: |
           pushd sources/wine
           patch -p1 < ${{ github.workspace }}/distversion.patch
+          patch -p1 < ${{ github.workspace }}/header-patch.patch
           popd
 
       - name: Patch in vkd3d-1.4 (specific to 22.0.0)
